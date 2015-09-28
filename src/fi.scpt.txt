@@ -1,31 +1,51 @@
 on alfred_script(q)
-  tell application "Finder"
-    set pathList to (quoted form of POSIX path of (folder of the front window as alias))
-  end tell
-  
-  tell application "System Events"
-    set isRunning to (exists (processes where name is "iTerm"))
-  end tell
-  
-  tell application "iTerm"
-    set termCount to count of terminals
-    
-    if termCount is 0 then
-      set myTerm to (make new terminal)
+    tell application "Finder"
+        set pathList to (quoted form of POSIX path of (folder of the front window as alias))
+    end tell
+
+    tell application "System Events"
+        set isRunning to (exists (processes where name is "iTerm"))
+    end tell
+
+    if isRunning then
+        run script "
+            on run {pathList}
+                tell application \":Applications:iTerm.app\"
+                    activate
+                    try
+                        select first window
+                        set onlywindow to false
+                    on error
+                        create window with default profile
+                        select first window
+                        set onlywindow to true
+                    end try
+                    tell the first window
+                        if onlywindow is false then
+                            create tab with default profile
+                        end if
+                        tell current session to write text \"cd \" & pathList
+                    end tell
+                end tell
+            end run
+        " with parameters {pathList}
     else
-      set myTerm to the first terminal
+        run script "
+            on run {pathList}
+                tell application \":Applications:iTerm.app\"
+                    activate
+                    try
+                        select first window
+                    on error
+                        create window with default profile
+                        select first window
+                    end try
+                    tell the first window
+                        tell current session to write text \"cd \" & pathList
+                    end tell
+                end tell
+            end run
+        " with parameters {pathList}
     end if
     
-    tell myTerm
-      if not isRunning and termCount is not 0 then
-        set mySession to current session
-      else
-        set mySession to (launch session "")
-      end if
-      tell mySession to write text "clear; cd " & pathList
-      
-    end tell
-    
-    activate
-  end tell
 end alfred_script
